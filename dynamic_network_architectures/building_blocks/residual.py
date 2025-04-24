@@ -24,6 +24,7 @@ class BasicBlockD(nn.Module):
                  dropout_op_kwargs: dict = None,
                  nonlin: Union[None, Type[torch.nn.Module]] = None,
                  nonlin_kwargs: dict = None,
+                 padding_mode: str = 'zeros',
                  stochastic_depth_p: float = 0.0,
                  squeeze_excitation: bool = False,
                  squeeze_excitation_reduction_ratio: float = 1. / 16,
@@ -67,9 +68,9 @@ class BasicBlockD(nn.Module):
             nonlin_kwargs = {}
 
         self.conv1 = ConvDropoutNormReLU(conv_op, input_channels, output_channels, kernel_size, stride, conv_bias,
-                                         norm_op, norm_op_kwargs, dropout_op, dropout_op_kwargs, nonlin, nonlin_kwargs)
+                                         norm_op, norm_op_kwargs, dropout_op, dropout_op_kwargs, nonlin, nonlin_kwargs, padding_mode)
         self.conv2 = ConvDropoutNormReLU(conv_op, output_channels, output_channels, kernel_size, 1, conv_bias, norm_op,
-                                         norm_op_kwargs, None, None, None, None)
+                                         norm_op_kwargs, None, None, None, None, padding_mode)
 
         self.nonlin2 = nonlin(**nonlin_kwargs) if nonlin is not None else lambda x: x
 
@@ -94,7 +95,7 @@ class BasicBlockD(nn.Module):
             if requires_projection:
                 ops.append(
                     ConvDropoutNormReLU(conv_op, input_channels, output_channels, 1, 1, False, norm_op,
-                                        norm_op_kwargs, None, None, None, None
+                                        norm_op_kwargs, None, None, None, None, padding_mode
                                         )
                 )
             self.skip = nn.Sequential(*ops)
@@ -145,6 +146,7 @@ class BottleneckD(nn.Module):
                  dropout_op_kwargs: dict = None,
                  nonlin: Union[None, Type[torch.nn.Module]] = None,
                  nonlin_kwargs: dict = None,
+                 padding_mode: str = 'zeros',
                  stochastic_depth_p: float = 0.0,
                  squeeze_excitation: bool = False,
                  squeeze_excitation_reduction_ratio: float = 1. / 16
@@ -189,12 +191,12 @@ class BottleneckD(nn.Module):
             nonlin_kwargs = {}
 
         self.conv1 = ConvDropoutNormReLU(conv_op, input_channels, bottleneck_channels, 1, 1, conv_bias,
-                                         norm_op, norm_op_kwargs, None, None, nonlin, nonlin_kwargs)
+                                         norm_op, norm_op_kwargs, None, None, nonlin, nonlin_kwargs, padding_mode)
         self.conv2 = ConvDropoutNormReLU(conv_op, bottleneck_channels, bottleneck_channels, kernel_size, stride,
                                          conv_bias,
-                                         norm_op, norm_op_kwargs, dropout_op, dropout_op_kwargs, nonlin, nonlin_kwargs)
+                                         norm_op, norm_op_kwargs, dropout_op, dropout_op_kwargs, nonlin, nonlin_kwargs, padding_mode)
         self.conv3 = ConvDropoutNormReLU(conv_op, bottleneck_channels, output_channels, 1, 1, conv_bias, norm_op,
-                                         norm_op_kwargs, None, None, None, None)
+                                         norm_op_kwargs, None, None, None, None, padding_mode)
 
         self.nonlin3 = nonlin(**nonlin_kwargs) if nonlin is not None else lambda x: x
 
@@ -219,7 +221,7 @@ class BottleneckD(nn.Module):
             if requires_projection:
                 ops.append(
                     ConvDropoutNormReLU(conv_op, input_channels, output_channels, 1, 1, False,
-                                        norm_op, norm_op_kwargs, None, None, None, None
+                                        norm_op, norm_op_kwargs, None, None, None, None, padding_mode
                                         )
                 )
             self.skip = nn.Sequential(*ops)
@@ -272,6 +274,7 @@ class StackedResidualBlocks(nn.Module):
                  dropout_op_kwargs: dict = None,
                  nonlin: Union[None, Type[torch.nn.Module]] = None,
                  nonlin_kwargs: dict = None,
+                 padding_mode: str = 'zeros',
                  block: Union[Type[BasicBlockD], Type[BottleneckD]] = BasicBlockD,
                  bottleneck_channels: Union[int, List[int], Tuple[int, ...]] = None,
                  stochastic_depth_p: float = 0.0,
@@ -317,20 +320,20 @@ class StackedResidualBlocks(nn.Module):
         if block == BasicBlockD:
             blocks = nn.Sequential(
                 block(conv_op, input_channels, output_channels[0], kernel_size, initial_stride, conv_bias,
-                      norm_op, norm_op_kwargs, dropout_op, dropout_op_kwargs, nonlin, nonlin_kwargs, stochastic_depth_p,
+                      norm_op, norm_op_kwargs, dropout_op, dropout_op_kwargs, nonlin, nonlin_kwargs, padding_mode, stochastic_depth_p,
                       squeeze_excitation, squeeze_excitation_reduction_ratio),
                 *[block(conv_op, output_channels[n - 1], output_channels[n], kernel_size, 1, conv_bias, norm_op,
-                        norm_op_kwargs, dropout_op, dropout_op_kwargs, nonlin, nonlin_kwargs, stochastic_depth_p,
+                        norm_op_kwargs, dropout_op, dropout_op_kwargs, nonlin, nonlin_kwargs, padding_mode, stochastic_depth_p,
                         squeeze_excitation, squeeze_excitation_reduction_ratio) for n in range(1, n_blocks)]
             )
         else:
             blocks = nn.Sequential(
                 block(conv_op, input_channels, bottleneck_channels[0], output_channels[0], kernel_size,
                       initial_stride, conv_bias, norm_op, norm_op_kwargs, dropout_op, dropout_op_kwargs,
-                      nonlin, nonlin_kwargs, stochastic_depth_p, squeeze_excitation, squeeze_excitation_reduction_ratio),
+                      nonlin, nonlin_kwargs, padding_mode, stochastic_depth_p, squeeze_excitation, squeeze_excitation_reduction_ratio),
                 *[block(conv_op, output_channels[n - 1], bottleneck_channels[n], output_channels[n], kernel_size,
                         1, conv_bias, norm_op, norm_op_kwargs, dropout_op, dropout_op_kwargs,
-                        nonlin, nonlin_kwargs, stochastic_depth_p, squeeze_excitation,
+                        nonlin, nonlin_kwargs, padding_mode, stochastic_depth_p, squeeze_excitation,
                         squeeze_excitation_reduction_ratio) for n in range(1, n_blocks)]
             )
         self.blocks = blocks

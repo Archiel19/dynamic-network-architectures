@@ -23,6 +23,7 @@ class ConvDropoutNormReLU(nn.Module):
                  dropout_op_kwargs: dict = None,
                  nonlin: Union[None, Type[torch.nn.Module]] = None,
                  nonlin_kwargs: dict = None,
+                 padding_mode: str = 'zeros',
                  nonlin_first: bool = False
                  ):
         super(ConvDropoutNormReLU, self).__init__()
@@ -47,6 +48,7 @@ class ConvDropoutNormReLU(nn.Module):
             padding=[(i - 1) // 2 for i in kernel_size],
             dilation=1,
             bias=conv_bias,
+            padding_mode=padding_mode
         )
         ops.append(self.conv)
 
@@ -93,6 +95,7 @@ class StackedConvBlocks(nn.Module):
                  dropout_op_kwargs: dict = None,
                  nonlin: Union[None, Type[torch.nn.Module]] = None,
                  nonlin_kwargs: dict = None,
+                 padding_mode: str = 'zeros',
                  nonlin_first: bool = False
                  ):
         """
@@ -119,12 +122,12 @@ class StackedConvBlocks(nn.Module):
         self.convs = nn.Sequential(
             ConvDropoutNormReLU(
                 conv_op, input_channels, output_channels[0], kernel_size, initial_stride, conv_bias, norm_op,
-                norm_op_kwargs, dropout_op, dropout_op_kwargs, nonlin, nonlin_kwargs, nonlin_first
+                norm_op_kwargs, dropout_op, dropout_op_kwargs, nonlin, nonlin_kwargs, padding_mode, nonlin_first
             ),
             *[
                 ConvDropoutNormReLU(
                     conv_op, output_channels[i - 1], output_channels[i], kernel_size, 1, conv_bias, norm_op,
-                    norm_op_kwargs, dropout_op, dropout_op_kwargs, nonlin, nonlin_kwargs, nonlin_first
+                    norm_op_kwargs, dropout_op, dropout_op_kwargs, nonlin, nonlin_kwargs, padding_mode, nonlin_first
                 )
                 for i in range(1, num_convs)
             ]

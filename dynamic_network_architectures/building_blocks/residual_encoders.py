@@ -26,6 +26,7 @@ class ResidualEncoder(nn.Module):
                  dropout_op_kwargs: dict = None,
                  nonlin: Union[None, Type[torch.nn.Module]] = None,
                  nonlin_kwargs: dict = None,
+                 padding_mode: str = 'zeros',
                  block: Union[Type[BasicBlockD], Type[BottleneckD]] = BasicBlockD,
                  bottleneck_channels: Union[int, List[int], Tuple[int, ...]] = None,
                  return_skips: bool = False,
@@ -92,7 +93,7 @@ class ResidualEncoder(nn.Module):
             if stem_channels is None:
                 stem_channels = features_per_stage[0]
             self.stem = StackedConvBlocks(1, conv_op, input_channels, stem_channels, kernel_sizes[0], 1, conv_bias,
-                                          norm_op, norm_op_kwargs, dropout_op, dropout_op_kwargs, nonlin, nonlin_kwargs)
+                                          norm_op, norm_op_kwargs, dropout_op, dropout_op_kwargs, nonlin, nonlin_kwargs, padding_mode=padding_mode)
             input_channels = stem_channels
         else:
             self.stem = None
@@ -104,7 +105,7 @@ class ResidualEncoder(nn.Module):
 
             stage = StackedResidualBlocks(
                 n_blocks_per_stage[s], conv_op, input_channels, features_per_stage[s], kernel_sizes[s], stride_for_conv,
-                conv_bias, norm_op, norm_op_kwargs, dropout_op, dropout_op_kwargs, nonlin, nonlin_kwargs,
+                conv_bias, norm_op, norm_op_kwargs, dropout_op, dropout_op_kwargs, nonlin, nonlin_kwargs, padding_mode=padding_mode,
                 block=block, bottleneck_channels=bottleneck_channels[s], stochastic_depth_p=stochastic_depth_p,
                 squeeze_excitation=squeeze_excitation,
                 squeeze_excitation_reduction_ratio=squeeze_excitation_reduction_ratio
@@ -127,6 +128,7 @@ class ResidualEncoder(nn.Module):
         self.norm_op_kwargs = norm_op_kwargs
         self.nonlin = nonlin
         self.nonlin_kwargs = nonlin_kwargs
+        self.padding_mode = padding_mode
         self.dropout_op = dropout_op
         self.dropout_op_kwargs = dropout_op_kwargs
         self.conv_bias = conv_bias

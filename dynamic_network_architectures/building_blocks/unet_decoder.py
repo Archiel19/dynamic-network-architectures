@@ -24,6 +24,7 @@ class UNetDecoder(nn.Module):
                  dropout_op_kwargs: dict = None,
                  nonlin: Union[None, Type[torch.nn.Module]] = None,
                  nonlin_kwargs: dict = None,
+                 padding_mode: str = None,
                  conv_bias: bool = None
                  ):
         """
@@ -60,7 +61,7 @@ class UNetDecoder(nn.Module):
         dropout_op_kwargs = encoder.dropout_op_kwargs if dropout_op_kwargs is None else dropout_op_kwargs
         nonlin = encoder.nonlin if nonlin is None else nonlin
         nonlin_kwargs = encoder.nonlin_kwargs if nonlin_kwargs is None else nonlin_kwargs
-
+        padding_mode = encoder.padding_mode if padding_mode is None else padding_mode
 
         # we start with the bottleneck and work out way up
         stages = []
@@ -85,13 +86,14 @@ class UNetDecoder(nn.Module):
                 dropout_op_kwargs,
                 nonlin,
                 nonlin_kwargs,
+                padding_mode,
                 nonlin_first
             ))
 
             # we always build the deep supervision outputs so that we can always load parameters. If we don't do this
             # then a model trained with deep_supervision=True could not easily be loaded at inference time where
             # deep supervision is not needed. It's just a convenience thing
-            seg_layers.append(encoder.conv_op(input_features_skip, num_classes, 1, 1, 0, bias=True))
+            seg_layers.append(encoder.conv_op(input_features_skip, num_classes, 1, 1, 0, bias=True, padding_mode=padding_mode))
 
         self.stages = nn.ModuleList(stages)
         self.transpconvs = nn.ModuleList(transpconvs)
